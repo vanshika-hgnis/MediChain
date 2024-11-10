@@ -1,0 +1,27 @@
+import base64
+import hashlib
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+
+
+def encrypt_data(data, key):
+    key_bytes = hashlib.sha256(key.encode()).digest()
+    cipher = Cipher(algorithms.AES(key_bytes), modes.EAX(), backend=default_backend())
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(data.encode()) + encryptor.finalize()
+    return base64.b64encode(cipher.nonce + encryptor.tag + ciphertext).decode()
+
+
+def decrypt_data(encrypted_data, key):
+    encrypted_data = base64.b64decode(encrypted_data)
+    nonce, tag, ciphertext = (
+        encrypted_data[:16],
+        encrypted_data[16:32],
+        encrypted_data[32:],
+    )
+    key_bytes = hashlib.sha256(key.encode()).digest()
+    cipher = Cipher(
+        algorithms.AES(key_bytes), modes.EAX(nonce=nonce), backend=default_backend()
+    )
+    decryptor = cipher.decryptor()
+    return decryptor.update(ciphertext) + decryptor.finalize()
